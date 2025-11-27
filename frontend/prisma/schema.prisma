@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  predictions Prediction[]
+  datasets     Dataset[]
+
+  @@map("users")
+}
+
+model Prediction {
+  id          String   @id @default(cuid())
+  userId      String
+  imageUrl    String
+  disease     String
+  confidence  Float
+  modelVersion String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("predictions")
+}
+
+model Dataset {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  fileUrl     String
+  fileSize    Int
+  sampleCount Int
+  classCount  Int
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("datasets")
+}
+
+model ModelMetrics {
+  id             String   @id @default(cuid())
+  accuracy       Float
+  precision      Float
+  recall         Float
+  f1Score        Float
+  trainingLoss   Float
+  validationLoss Float
+  createdAt      DateTime @default(now())
+
+  @@map("model_metrics")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
