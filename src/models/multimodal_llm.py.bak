@@ -1,0 +1,332 @@
+"""
+Multimodal LLM for CarthaNeuro
+Integrates LLaVA or Qwen2-VL for medical image analysis
+"""
+
+import torch
+from PIL import Image
+from typing import Dict, Any, Optional
+import json
+import re
+from transformers import (
+    AutoTokenizer, 
+    AutoModelForCausalLM,
+    AutoProcessor,
+    BitsAndBytesConfig
+)
+from peft import PeftModel
+import time
+
+from src.utils.logger import setup_logger
+from src.config.settings import settings
+
+logger = setup_logger(__name__)
+
+class MultimodalLLM:
+    """Multimodal LLM for medical image analysis"""
+    
+    def __init__(
+        self, 
+        model_name: str = "llava-hf/llava-1.5-7b-hf",
+        device: str = "cuda",
+        cache_dir: Optional[str] = None
+    ):
+        self.model_name = model_name
+        self.device = device
+        self.cache_dir = cache_dir
+        self.processor = None
+        self.model = None
+        self.tokenizer = None
+        
+        # Medical analysis prompt template
+        self.medical_prompt_template = """
+        Analyze this brain MRI image for medical assessment. Provide a structured JSON response with the following fields:
+
+        {{
+            "clinical_summary": "Brief summary of findings",
+            "risk_score": "Low/Medium/High",
+            "suspected_region": "Brain region of interest",
+            "key_observations": ["observation1", "observation2"],
+            "recommendations": ["recommendation1", "recommendation2"]
+        }}
+
+        Focus on neurological findings and tumor characteristics. Be precise and clinical.
+        
+        Patient context: {patient_context}
+        
+        Please analyze the image and provide the structured response:
+        """
+        
+    def load_model(self):
+        """Load the multimodal model and processor"""
+        try:
+            logger.info(f"Loading multimodal model: {self.model_name}")
+            start_time = time.time()
+            
+            # Configure quantization for memory efficiency
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4"
+            )
+            
+            # Load processor and model
+            self.processor = AutoProcessor.from_pretrained(
+                self.model_name,
+                cache_dir=self.cache_dir
+            )
+            
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_name,
+                torch_dtype=torch.float16,
+                device_map="auto",
+                quantization_config=quantization_config,
+                cache_dir=self.cache_dir
+            )
+            
+            # Load tokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name,
+                cache_dir=self.cache_dir
+            )
+            
+            # Set pad token if not available
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+                
+            load_time = time.time() - start_time
+            logger.info(f"Multimodal model loaded successfully in {load_time:.2f}s")
+            
+        except Exception as e:
+            logger.error(f"Failed to load multimodal model: {str(e)}")
+            raise
+            
+    def preprocess_image(self, image_input) -> Image.Image:
+        """
+        Preprocess image for model input
+        
+        Args:
+            image_input: PIL Image, file path, or bytes
+            
+        Returns:
+            Preprocessed PIL Image
+        """
+        try:
+            if isinstance(image_input, bytes):
+                image = Image.open(io.BytesIO(image_input)).convert("RGB")
+            elif isinstance(image_input, str):
+                image = Image.open(image_input).convert("RGB")
+            elif isinstance(image_input, Image.Image):
+                image = image_input.convert("RGB")
+            else:
+                raise ValueError(f"Unsupported image input type: {type(image_input)}")
+                
+            # Resize to model requirements (typical for LLaVA: 224x224 or 336x336)
+            image = image.resize((336, 336), Image.Resampling.LANCZOS)
+            
+            return image
+            
+        except Exception as e:
+            logger.error(f"Image preprocessing failed: {str(e)}")
+            raise
+            
+    def generate_structured_response(self, image: Image.Image, patient_context: str = "") -> Dict[str, Any]:
+        """
+        Generate structured medical analysis from image and text
+        
+        Args:
+            image: PIL Image of brain MRI
+            patient_context: Additional patient context or symptoms
+            
+        Returns:
+            Structured medical analysis
+        """
+        try:
+            # Check if model is loaded
+            if self.processor is None or self.model is None or self.tokenizer is None:
+                logger.warning("Multimodal model not loaded, using fallback response")
+                return self._get_fallback_response()
+            
+            # Prepare the prompt
+            prompt = self.medical_prompt_template.format(patient_context=patient_context)
+            
+            # Process inputs
+            inputs = self.processor(
+                text=prompt,
+                images=image,
+                return_tensors="pt"
+            ).to(self.device)
+            
+            # Generate response
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=settings.max_new_tokens,
+                    do_sample=settings.do_sample,
+                    temperature=settings.temperature,
+                    pad_token_id=self.tokenizer.eos_token_id
+                )
+                
+            # Decode response
+            generated_ids = [
+                output_ids[len(input_ids):] 
+                for input_ids, output_ids in zip(inputs.input_ids, outputs)
+            ]
+            response_text = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            
+            # Parse JSON response
+            structured_data = self._extract_json_from_response(response_text)
+            
+            # Add metadata
+            result = {
+                "structured_data": structured_data,
+                "raw_response": response_text,
+                "model_info": {
+                    "model_name": self.model_name,
+                    "device": self.device,
+                    "timestamp": time.time()
+                }
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Structured response generation failed: {str(e)}")
+            # Return fallback structured response
+            return self._get_fallback_response()
+            
+    def _extract_json_from_response(self, response_text: str) -> Dict[str, Any]:
+        """
+        Extract JSON from model response text
+        
+        Args:
+            response_text: Raw model response
+            
+        Returns:
+            Parsed JSON data or fallback
+        """
+        try:
+            # Look for JSON pattern in response
+            json_pattern = r'\{.*\}'
+            matches = re.search(json_pattern, response_text, re.DOTALL)
+            
+            if matches:
+                json_str = matches.group(0)
+                return json.loads(json_str)
+            else:
+                # Try to find JSON in code blocks
+                code_block_pattern = r'```json\s*(\{.*?\})\s*```'
+                matches = re.search(code_block_pattern, response_text, re.DOTALL)
+                
+                if matches:
+                    json_str = matches.group(1)
+                    return json.loads(json_str)
+                    
+            # If no JSON found, try to parse the entire response
+            return json.loads(response_text)
+            
+        except (json.JSONDecodeError, AttributeError) as e:
+            logger.warning(f"JSON extraction failed: {str(e)}")
+            return self._parse_text_response(response_text)
+            
+    def _parse_text_response(self, response_text: str) -> Dict[str, Any]:
+        """
+        Parse text response into structured format when JSON parsing fails
+        
+        Args:
+            response_text: Raw response text
+            
+        Returns:
+            Structured data extracted from text
+        """
+        # Simple text parsing as fallback
+        lines = response_text.split('\n')
+        
+        result = {
+            "clinical_summary": "Analysis completed - see raw response",
+            "risk_score": "Unknown",
+            "suspected_region": "Brain",
+            "key_observations": ["Image analysis performed"],
+            "recommendations": ["Review detailed findings in raw response"],
+            "raw_text": response_text
+        }
+        
+        # Try to extract information using keywords
+        text_lower = response_text.lower()
+        
+        # Risk assessment
+        if any(word in text_lower for word in ['low risk', 'benign', 'normal']):
+            result["risk_score"] = "Low"
+        elif any(word in text_lower for word in ['high risk', 'malignant', 'aggressive']):
+            result["risk_score"] = "High"
+        elif any(word in text_lower for word in ['moderate', 'suspicious', 'concerning']):
+            result["risk_score"] = "Medium"
+            
+        return result
+        
+    def _get_fallback_response(self) -> Dict[str, Any]:
+        """Get fallback response when generation fails"""
+        return {
+            "structured_data": {
+                "clinical_summary": "Medical image analysis could not be completed",
+                "risk_score": "Unknown",
+                "suspected_region": "Not determined",
+                "key_observations": ["Analysis unavailable"],
+                "recommendations": ["Please retry with valid image and context"]
+            },
+            "raw_response": "Fallback response - analysis unavailable",
+            "model_info": {
+                "model_name": self.model_name,
+                "device": self.device,
+                "timestamp": time.time(),
+                "error": "Generation failed"
+            }
+        }
+        
+    def predict(self, image_input, patient_context: str = "") -> Dict[str, Any]:
+        """
+        Main prediction method
+        
+        Args:
+            image_input: Image data (PIL Image, file path, or bytes)
+            patient_context: Patient context or symptoms
+            
+        Returns:
+            Structured medical analysis
+        """
+        try:
+            # Preprocess image
+            image = self.preprocess_image(image_input)
+            
+            # Generate structured response
+            result = self.generate_structured_response(image, patient_context)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Prediction failed: {str(e)}")
+            return self._get_fallback_response()
+            
+    def cleanup(self):
+        """Cleanup model resources"""
+        try:
+            if self.model:
+                del self.model
+            if self.processor:
+                del self.processor
+            if self.tokenizer:
+                del self.tokenizer
+                
+            # Clear GPU cache
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                
+            logger.info("Multimodal LLM cleanup completed")
+            
+        except Exception as e:
+            logger.warning(f"Cleanup error: {str(e)}")
+
+
+# Import required modules
+import io

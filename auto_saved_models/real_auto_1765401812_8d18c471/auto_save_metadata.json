@@ -1,0 +1,36 @@
+{
+  "model_name": "real",
+  "save_id": "auto_1765401812_8d18c471",
+  "framework": "pytorch",
+  "saved_at": "2025-12-10T22:23:32.378053",
+  "save_type": "auto_save",
+  "training_metadata": {
+    "job_id": "46b7074c-d37d-4bac-a36b-cf2ea5a55e72",
+    "completion_data": {
+      "job_id": "46b7074c-d37d-4bac-a36b-cf2ea5a55e72",
+      "model_name": "real",
+      "framework": "3d_cnn",
+      "architecture": "resnet",
+      "epochs_completed": 5,
+      "total_epochs": 5,
+      "batch_size": 8,
+      "learning_rate": 0.001,
+      "optimizer": "adam",
+      "loss_function": "categorical_crossentropy",
+      "final_training_loss": 0.77,
+      "final_training_accuracy": 0.9249999999999999,
+      "final_validation_loss": 0.56,
+      "final_validation_accuracy": 0.91,
+      "best_validation_accuracy": 0.91,
+      "best_epoch": 5,
+      "start_time": 1765401801.2870686,
+      "training_time": 11.067774057388306,
+      "user_id": "692f4ed45b4b8f6ee4565557"
+    },
+    "auto_save_integration": true
+  },
+  "files_saved": [
+    "auto_saved_models\\real_auto_1765401812_8d18c471\\metrics.json"
+  ],
+  "auto_save": true
+}

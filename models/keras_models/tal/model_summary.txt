@@ -1,0 +1,15 @@
+CarthaNeuro - Professional Model Save Summary
+==================================================
+
+Model Name: tal
+Framework: Keras
+Saved At: 2025-12-10 23:25:00
+Formats Saved: model.h5, model.keras, metadata.json, classes.txt
+Total Parameters: 295044
+Input Shape: [None, 224, 224, 1]
+Output Shape: [None, 4]
+TensorFlow Version: 2.14.0
+Professional Save: True
+Multi-Format Support: True
+
+Both .h5 and .keras formats available for maximum compatibility

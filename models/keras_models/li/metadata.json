@@ -1,0 +1,52 @@
+{
+  "model_name": "lili",
+  "model_type": "keras_simple_cnn",
+  "framework": "keras",
+  "class_names": [
+    "glioma",
+    "meningioma",
+    "notumor",
+    "pituitary"
+  ],
+  "num_classes": 4,
+  "created_at": 1765406770.406785,
+  "saved_at": 1765406770.4897377,
+  "input_shape": [
+    null,
+    224,
+    224,
+    1
+  ],
+  "output_shape": [
+    null,
+    4
+  ],
+  "total_params": 295044,
+  "save_formats": [
+    "model.h5",
+    "model.keras"
+  ],
+  "save_errors": [],
+  "professional_save": true,
+  "multi_format_support": true,
+  "tensorflow_version": "2.14.0",
+  "metadata": {
+    "model_type": "3d_vit",
+    "created_by": "admin_dashboard",
+    "timestamp": "2025-12-10T22:46:09.387Z",
+    "description": "Enhanced model lili with detailed metrics",
+    "version": "1.0",
+    "tags": [
+      "keras",
+      "brain-tumor-classification",
+      "admin-saved"
+    ],
+    "training_config": {
+      "framework": "keras",
+      "architecture": "3d_vit",
+      "saved_via": "admin_dashboard"
+    },
+    "demo_model": true,
+    "created_for": "demo_saving"
+  }
+}

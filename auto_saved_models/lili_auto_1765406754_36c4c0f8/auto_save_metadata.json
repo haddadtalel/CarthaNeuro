@@ -1,0 +1,36 @@
+{
+  "model_name": "lili",
+  "save_id": "auto_1765406754_36c4c0f8",
+  "framework": "pytorch",
+  "saved_at": "2025-12-10T23:45:54.311178",
+  "save_type": "auto_save",
+  "training_metadata": {
+    "job_id": "47bebfa5-e11d-475e-b36c-56519f5fb558",
+    "completion_data": {
+      "job_id": "47bebfa5-e11d-475e-b36c-56519f5fb558",
+      "model_name": "lili",
+      "framework": "3d_vit",
+      "architecture": "pure_vit",
+      "epochs_completed": 20,
+      "total_epochs": 20,
+      "batch_size": 16,
+      "learning_rate": 0.001,
+      "optimizer": "adam",
+      "loss_function": "categorical_crossentropy",
+      "final_training_loss": 0.7849999999999999,
+      "final_training_accuracy": 0.9375,
+      "final_validation_loss": 0.5900000000000001,
+      "final_validation_accuracy": 0.94,
+      "best_validation_accuracy": 0.94,
+      "best_epoch": 20,
+      "start_time": 1765406718.4300888,
+      "training_time": 35.85108208656311,
+      "user_id": "692f4ed45b4b8f6ee4565557"
+    },
+    "auto_save_integration": true
+  },
+  "files_saved": [
+    "auto_saved_models\\lili_auto_1765406754_36c4c0f8\\metrics.json"
+  ],
+  "auto_save": true
+}

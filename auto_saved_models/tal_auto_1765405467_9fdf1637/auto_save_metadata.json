@@ -1,0 +1,36 @@
+{
+  "model_name": "tal",
+  "save_id": "auto_1765405467_9fdf1637",
+  "framework": "pytorch",
+  "saved_at": "2025-12-10T23:24:27.757219",
+  "save_type": "auto_save",
+  "training_metadata": {
+    "job_id": "ffcc20f4-adeb-408e-b71a-a02c4ce7e425",
+    "completion_data": {
+      "job_id": "ffcc20f4-adeb-408e-b71a-a02c4ce7e425",
+      "model_name": "tal",
+      "framework": "3d_vit",
+      "architecture": "densenet",
+      "epochs_completed": 20,
+      "total_epochs": 20,
+      "batch_size": 8,
+      "learning_rate": 0.001,
+      "optimizer": "adam",
+      "loss_function": "categorical_crossentropy",
+      "final_training_loss": 0.7925,
+      "final_training_accuracy": 0.94375,
+      "final_validation_loss": 0.5900000000000001,
+      "final_validation_accuracy": 0.94,
+      "best_validation_accuracy": 0.94,
+      "best_epoch": 20,
+      "start_time": 1765405419.9659758,
+      "training_time": 47.78374218940735,
+      "user_id": "692f4ed45b4b8f6ee4565557"
+    },
+    "auto_save_integration": true
+  },
+  "files_saved": [
+    "auto_saved_models\\tal_auto_1765405467_9fdf1637\\metrics.json"
+  ],
+  "auto_save": true
+}

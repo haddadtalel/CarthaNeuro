@@ -1,0 +1,79 @@
+# CarthaNeuro Backend Docker Compose Configuration
+
+version: '3.8'
+
+services:
+  carthaneuro-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: carthaneuro-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount models directory for persistence
+      - ./models:/app/models
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Mount cache directory
+      - ./cache:/app/cache
+      # Mount configuration
+      - ./.env:/app/.env
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - carthaneuro-network
+
+  # Optional: Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: carthaneuro-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - carthaneuro-network
+
+  # Optional: PostgreSQL for logging and metadata storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: carthaneuro-postgres
+    environment:
+      POSTGRES_DB: carthaneuro
+      POSTGRES_USER: carthaneuro
+      POSTGRES_PASSWORD: secure_password_123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - carthaneuro-network
+
+networks:
+  carthaneuro-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  postgres_data:
