@@ -1,0 +1,14 @@
+# Directories to ignore
+backend/uploads/
+uploads/
+kaggle_train/
+0602/
+
+# Model files (large binary files)
+backend/models/*.h5
+backend/models/*.json
+
+# Python files in root
+inject_model.py
+kagglefile.ipynb
+alzheimer-detection-using-cnn.ipynb
