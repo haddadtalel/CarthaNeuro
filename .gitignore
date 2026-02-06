@@ -11,4 +11,5 @@ backend/models/*.json
 # Python files in root
 inject_model.py
 kagglefile.ipynb
+README.md
 alzheimer-detection-using-cnn.ipynb
