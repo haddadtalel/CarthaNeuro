@@ -1,4 +1,4 @@
-# CarNeu0602
+# CarNero
 
 Alzheimer Detection Using CNN - CarNeu0602 Project
 
